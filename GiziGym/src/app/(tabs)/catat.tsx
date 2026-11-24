@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { searchFoods } from '../../db/queries';
 import { formatKalori, formatProtein } from '../../lib/nutrition';
@@ -16,6 +17,7 @@ import { Food } from '../../types';
 
 export default function CatatScreen() {
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [foods, setFoods] = useState<Food[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,8 +85,15 @@ export default function CatatScreen() {
         <FlatList
           data={foods}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+          ]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          initialNumToRender={15}
+          maxToRenderPerBatch={20}
+          windowSize={10}
           renderItem={({ item }) => (
             <Pressable
               style={({ pressed }) => [
@@ -125,6 +134,8 @@ const styles = StyleSheet.create({
   searchInput: {
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
@@ -136,7 +147,7 @@ const styles = StyleSheet.create({
   },
   foodItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -145,7 +156,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   foodItemPressed: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#BFDBFE',
   },
   foodInfo: {
     flex: 1,
@@ -156,23 +168,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 4,
+    flexWrap: 'wrap',
+    flexShrink: 1,
   },
   foodNutrients: {
     fontSize: 13,
     color: '#64748B',
+    lineHeight: 18,
   },
   selectBadge: {
     backgroundColor: '#EFF6FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectBadgeText: {
     color: '#2563EB',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   centerContainer: {
     flex: 1,

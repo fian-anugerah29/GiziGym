@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { deleteFoodLog, getFoodLogsByDate, getProfile } from '../../db/queries';
 import { formatDisplayDate, getLocalDateString } from '../../lib/date';
@@ -20,6 +21,7 @@ import { FoodLogItem, NutritionTargets, Profile } from '../../types';
 
 export default function BerandaScreen() {
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
@@ -108,10 +110,17 @@ export default function BerandaScreen() {
     ? Math.min(Math.max((totalProtein / targets.targetProtein) * 100, 0), 100)
     : 0;
 
+  // Cek apakah asupan melebihi target
+  const isKaloriOver = targets.targetKalori > 0 && totalKalori > targets.targetKalori;
+  const isProteinOver = targets.targetProtein > 0 && totalProtein > targets.targetProtein;
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+      ]}
       keyboardShouldPersistTaps="handled"
     >
       {/* Header Tanggal */}
@@ -136,7 +145,7 @@ export default function BerandaScreen() {
             <View
               style={[
                 styles.progressBarFill,
-                styles.progressKalori,
+                isKaloriOver ? styles.progressKaloriOver : styles.progressKalori,
                 { width: `${kaloriPercent}%` },
               ]}
             />
@@ -170,7 +179,7 @@ export default function BerandaScreen() {
             <View
               style={[
                 styles.progressBarFill,
-                styles.progressProtein,
+                isProteinOver ? styles.progressProteinOver : styles.progressProtein,
                 { width: `${proteinPercent}%` },
               ]}
             />
@@ -196,7 +205,10 @@ export default function BerandaScreen() {
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.cardTitle}>Makanan Dicatat Hari Ini</Text>
           <Pressable
-            style={styles.addMiniButton}
+            style={({ pressed }) => [
+              styles.addMiniButton,
+              pressed && styles.addMiniButtonPressed,
+            ]}
             onPress={() => router.push('/(tabs)/catat')}
           >
             <Text style={styles.addMiniButtonText}>+ Tambah</Text>
@@ -219,7 +231,10 @@ export default function BerandaScreen() {
                   </Text>
                 </View>
                 <Pressable
-                  style={styles.deleteButton}
+                  style={({ pressed }) => [
+                    styles.deleteButton,
+                    pressed && styles.deleteButtonPressed,
+                  ]}
                   onPress={() => handleDeleteLog(item.id)}
                 >
                   <Text style={styles.deleteButtonText}>Hapus</Text>
@@ -240,7 +255,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 36,
   },
   centerContainer: {
     flex: 1,
@@ -255,8 +269,8 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 8,
   },
@@ -287,10 +301,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     fontWeight: '500',
+    marginBottom: 2,
   },
   dateValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#0F172A',
   },
   card: {
@@ -314,15 +329,18 @@ const styles = StyleSheet.create({
   },
   addMiniButton: {
     backgroundColor: '#EFF6FF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
+  addMiniButtonPressed: {
+    backgroundColor: '#DBEAFE',
+  },
   addMiniButtonText: {
     color: '#2563EB',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   nutrientSection: {
@@ -357,8 +375,14 @@ const styles = StyleSheet.create({
   progressKalori: {
     backgroundColor: '#2563EB',
   },
+  progressKaloriOver: {
+    backgroundColor: '#EF4444',
+  },
   progressProtein: {
     backgroundColor: '#10B981',
+  },
+  progressProteinOver: {
+    backgroundColor: '#F59E0B',
   },
   subInfoRow: {
     flexDirection: 'row',
@@ -413,7 +437,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#0F172A',
-    marginBottom: 2,
+    marginBottom: 4,
+    flexWrap: 'wrap',
   },
   logDetails: {
     fontSize: 12,
@@ -421,11 +446,14 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#FECACA',
+  },
+  deleteButtonPressed: {
+    backgroundColor: '#FCA5A5',
   },
   deleteButtonText: {
     color: '#DC2626',

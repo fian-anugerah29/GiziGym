@@ -47,14 +47,59 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
       'SELECT COUNT(*) as count FROM foods'
     );
     if (!countResult || countResult.count === 0) {
-      for (const item of FOODS_SEED) {
-        await db.runAsync(
-          'INSERT INTO foods (nama, kalori_100g, protein_100g) VALUES (?, ?, ?)',
-          [item.nama, item.kalori_100g, item.protein_100g]
-        );
-      }
+      await db.withTransactionAsync(async () => {
+        for (const item of FOODS_SEED) {
+          await db.runAsync(
+            'INSERT INTO foods (nama, kalori_100g, protein_100g) VALUES (?, ?, ?)',
+            [item.nama, item.kalori_100g, item.protein_100g]
+          );
+        }
+      });
     }
 
     await db.execAsync('PRAGMA user_version = 1');
+    currentDbVersion = 1;
+  }
+
+  if (currentDbVersion < 2) {
+    // Migrasi versi 2:
+    // Pastikan tidak ada nama ganda terlebih dahulu secara aman sebelum membuat indeks UNIQUE
+    await db.execAsync(`
+      UPDATE food_logs
+      SET food_id = (
+        SELECT MIN(f2.id)
+        FROM foods f2
+        JOIN foods f1 ON f1.nama = f2.nama
+        WHERE f1.id = food_logs.food_id
+      )
+      WHERE food_id IN (
+        SELECT f.id FROM foods f WHERE f.id NOT IN (
+          SELECT MIN(id) FROM foods GROUP BY nama
+        )
+      );
+
+      DELETE FROM foods
+      WHERE id NOT IN (
+        SELECT MIN(id)
+        FROM foods
+        GROUP BY nama
+      );
+
+      DROP INDEX IF EXISTS idx_foods_nama;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_foods_nama ON foods(nama);
+    `);
+
+    // Masukkan semua makanan dengan INSERT OR IGNORE dalam satu transaksi
+    await db.withTransactionAsync(async () => {
+      for (const item of FOODS_SEED) {
+        await db.runAsync(
+          'INSERT OR IGNORE INTO foods (nama, kalori_100g, protein_100g) VALUES (?, ?, ?)',
+          [item.nama, item.kalori_100g, item.protein_100g]
+        );
+      }
+    });
+
+    await db.execAsync('PRAGMA user_version = 2');
+    currentDbVersion = 2;
   }
 }

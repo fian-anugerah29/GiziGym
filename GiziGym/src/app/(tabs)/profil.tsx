@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getProfile } from '../../db/queries';
 import {
@@ -19,6 +20,7 @@ import { NutritionTargets, Profile } from '../../types';
 
 export default function ProfilScreen() {
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
@@ -96,7 +98,11 @@ export default function ProfilScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+      ]}
+      keyboardShouldPersistTaps="handled"
     >
       {/* Target Nutrisi Harian */}
       <View style={styles.card}>
@@ -172,7 +178,10 @@ export default function ProfilScreen() {
 
       {/* Tombol Ubah Data */}
       <Pressable
-        style={styles.primaryButton}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          pressed && styles.primaryButtonPressed,
+        ]}
         onPress={() => router.push('/onboarding?mode=edit')}
       >
         <Text style={styles.primaryButtonText}>Ubah Data</Text>
@@ -195,7 +204,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 32,
   },
   centerContainer: {
     flex: 1,
@@ -210,8 +218,8 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 8,
   },
@@ -264,7 +272,7 @@ const styles = StyleSheet.create({
   },
   targetValue: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0F172A',
   },
   unitText: {
@@ -274,9 +282,11 @@ const styles = StyleSheet.create({
   },
   detailStats: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   detailStatItem: {
     flexDirection: 'row',
@@ -318,22 +328,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  primaryButtonPressed: {
+    backgroundColor: '#1D4ED8',
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   disclaimerBox: {
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   disclaimerText: {
-    fontSize: 12,
-    color: '#94A3B8',
+    fontSize: 13,
+    color: '#64748B',
     fontStyle: 'italic',
     textAlign: 'center',
+    lineHeight: 18,
   },
 });

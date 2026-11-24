@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getProfile } from '../db/queries';
 
 export default function IndexScreen() {
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
 
@@ -41,7 +43,15 @@ export default function IndexScreen() {
 
   if (loading || hasProfile === null) {
     return (
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
         <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Memeriksa profil...</Text>
       </View>
@@ -65,7 +75,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: '#64748B',
   },
 });

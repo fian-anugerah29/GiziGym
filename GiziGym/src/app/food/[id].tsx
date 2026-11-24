@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getFoodById, insertFoodLog } from '../../db/queries';
 import { getLocalDateString } from '../../lib/date';
@@ -24,6 +25,7 @@ const QUICK_PORTIONS = [50, 100, 150, 200];
 
 export default function FoodDetailScreen() {
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const foodId = Number(id);
 
@@ -113,7 +115,13 @@ export default function FoodDetailScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.notFoundText}>Makanan tidak ditemukan</Text>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && styles.backButtonPressed,
+          ]}
+          onPress={() => router.back()}
+        >
           <Text style={styles.backButtonText}>Kembali</Text>
         </Pressable>
       </View>
@@ -123,8 +131,12 @@ export default function FoodDetailScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+      ]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
     >
       {/* Kartu Informasi Makanan */}
       <View style={styles.card}>
@@ -173,9 +185,10 @@ export default function FoodDetailScreen() {
             return (
               <Pressable
                 key={portion}
-                style={[
+                style={({ pressed }) => [
                   styles.quickButton,
                   isSelected && styles.quickButtonActive,
+                  pressed && styles.quickButtonPressed,
                 ]}
                 onPress={() => handleSelectQuickPortion(portion)}
               >
@@ -195,7 +208,9 @@ export default function FoodDetailScreen() {
 
       {/* Pratinjau Nutrisi Berdasarkan Porsi */}
       <View style={[styles.card, styles.previewCard]}>
-        <Text style={styles.previewTitle}>Pratinjau Gizi untuk {isValidGram ? gramNum : 0} gram</Text>
+        <Text style={styles.previewTitle}>
+          Pratinjau Gizi untuk {isValidGram ? gramNum : 0} gram
+        </Text>
         <View style={styles.previewRow}>
           <View style={[styles.previewBox, styles.previewBoxKalori]}>
             <Text style={styles.previewBoxLabel}>Kalori</Text>
@@ -214,7 +229,11 @@ export default function FoodDetailScreen() {
 
       {/* Tombol Tambah */}
       <Pressable
-        style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          pressed && styles.primaryButtonPressed,
+          saving && styles.primaryButtonDisabled,
+        ]}
         onPress={handleAddFood}
         disabled={saving}
       >
@@ -235,7 +254,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 36,
   },
   centerContainer: {
     flex: 1,
@@ -256,13 +274,17 @@ const styles = StyleSheet.create({
   },
   backButton: {
     backgroundColor: '#2563EB',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  backButtonPressed: {
+    backgroundColor: '#1D4ED8',
   },
   backButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -274,7 +296,7 @@ const styles = StyleSheet.create({
   },
   foodTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 4,
   },
@@ -290,7 +312,7 @@ const styles = StyleSheet.create({
   baseNutrientBox: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -321,7 +343,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
@@ -333,7 +355,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#EF4444',
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '500',
     marginTop: 6,
   },
   quickLabel: {
@@ -355,6 +378,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  quickButtonPressed: {
+    backgroundColor: '#E2E8F0',
   },
   quickButtonActive: {
     backgroundColor: '#EFF6FF',
@@ -405,7 +431,7 @@ const styles = StyleSheet.create({
   },
   previewBoxValue: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0F172A',
   },
   primaryButton: {
@@ -415,6 +441,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
+    marginBottom: 12,
+  },
+  primaryButtonPressed: {
+    backgroundColor: '#1D4ED8',
   },
   primaryButtonDisabled: {
     opacity: 0.6,

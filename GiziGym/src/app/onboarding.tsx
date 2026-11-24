@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getProfile, saveProfile } from '../db/queries';
 import {
@@ -20,6 +21,7 @@ import { JenisKelamin, TingkatAktivitas, Tujuan } from '../types';
 
 export default function OnboardingScreen() {
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ mode?: string }>();
   const isEditMode = params.mode === 'edit';
 
@@ -108,8 +110,15 @@ export default function OnboardingScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        {
+          paddingTop: Math.max(insets.top, 20) + 10,
+          paddingBottom: Math.max(insets.bottom, 20) + 30,
+        },
+      ]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
     >
       <View style={styles.header}>
         <Text style={styles.title}>
@@ -314,20 +323,29 @@ export default function OnboardingScreen() {
 
         {/* Tombol Simpan */}
         <Pressable
-          style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            pressed && styles.primaryButtonPressed,
+            saving && styles.primaryButtonDisabled,
+          ]}
           onPress={handleSubmit}
           disabled={saving}
         >
           {saving ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.primaryButtonText}>Hitung Target</Text>
+            <Text style={styles.primaryButtonText}>
+              {isEditMode ? 'Simpan Perubahan' : 'Hitung Target'}
+            </Text>
           )}
         </Pressable>
 
         {isEditMode && (
           <Pressable
-            style={styles.cancelButton}
+            style={({ pressed }) => [
+              styles.cancelButton,
+              pressed && styles.cancelButtonPressed,
+            ]}
             onPress={() => router.back()}
             disabled={saving}
           >
@@ -345,8 +363,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
   },
   centerContainer: {
     flex: 1,
@@ -361,12 +378,11 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   header: {
-    marginTop: 20,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 8,
   },
@@ -395,7 +411,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -407,8 +423,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 6,
   },
   row: {
     flexDirection: 'row',
@@ -454,6 +471,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10,
   },
+  primaryButtonPressed: {
+    backgroundColor: '#1D4ED8',
+  },
   primaryButtonDisabled: {
     opacity: 0.6,
   },
@@ -467,6 +487,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 10,
+  },
+  cancelButtonPressed: {
+    backgroundColor: '#F1F5F9',
   },
   cancelButtonText: {
     color: '#64748B',
