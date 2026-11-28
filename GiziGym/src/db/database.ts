@@ -102,4 +102,22 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     await db.execAsync('PRAGMA user_version = 2');
     currentDbVersion = 2;
   }
+
+  if (currentDbVersion < 3) {
+    // Migrasi versi 3: tambahkan 2 makanan USDA tanpa mengubah data makanan maupun catatan yang sudah ada
+    const usdaFoods = FOODS_SEED.filter((item) => item.nama.endsWith('(USDA)'));
+
+    await db.withTransactionAsync(async () => {
+      for (const item of usdaFoods) {
+        await db.runAsync(
+          'INSERT OR IGNORE INTO foods (nama, kalori_100g, protein_100g) VALUES (?, ?, ?)',
+          [item.nama, item.kalori_100g, item.protein_100g]
+        );
+      }
+    });
+
+    const nextVersion = currentDbVersion + 1;
+    await db.execAsync(`PRAGMA user_version = ${nextVersion}`);
+    currentDbVersion = nextVersion;
+  }
 }

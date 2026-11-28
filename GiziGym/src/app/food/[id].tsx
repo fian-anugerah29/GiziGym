@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -8,18 +8,24 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
-import { getFoodById, insertFoodLog } from '../../db/queries';
+import {
+  getFoodById,
+  getFoodLogsByDate,
+  getProfile,
+  insertFoodLog,
+} from '../../db/queries';
 import { getLocalDateString } from '../../lib/date';
 import {
+  calculateNutrition,
   calculatePortionNutrition,
   formatKalori,
   formatProtein,
   parseNumberInput,
 } from '../../lib/nutrition';
-import { Food } from '../../types';
+import { Food, NutritionTargets } from '../../types';
 
 const QUICK_PORTIONS = [50, 100, 150, 200];
 
@@ -30,44 +36,58 @@ export default function FoodDetailScreen() {
   const foodId = Number(id);
 
   const [food, setFood] = useState<Food | null>(null);
+  const [targets, setTargets] = useState<NutritionTargets | null>(null);
+  const [todayKalori, setTodayKalori] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [gramText, setGramText] = useState('100');
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadFood() {
-      if (isNaN(foodId)) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const item = await getFoodById(db, foodId);
-        if (isMounted) {
-          setFood(item);
-        }
-      } catch (e) {
-        console.error('Gagal memuat makanan:', e);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      async function loadData() {
+        try {
+          const today = getLocalDateString();
+          const [item, currentProfile, dailyLogs] = await Promise.all([
+            isNaN(foodId) ? Promise.resolve(null) : getFoodById(db, foodId),
+            getProfile(db),
+            getFoodLogsByDate(db, today),
+          ]);
+          if (!isActive) return;
 
-    loadFood();
-    return () => {
-      isMounted = false;
-    };
-  }, [db, foodId]);
+          setFood(item);
+          setTargets(currentProfile ? calculateNutrition(currentProfile) : null);
+          setTodayKalori(dailyLogs.reduce((sum, log) => sum + log.kalori, 0));
+        } catch (e) {
+          console.error('Gagal memuat makanan:', e);
+        } finally {
+          if (isActive) {
+            setLoading(false);
+          }
+        }
+      }
+
+      loadData();
+      return () => {
+        isActive = false;
+      };
+    }, [db, foodId])
+  );
 
   const gramNum = parseNumberInput(gramText);
   const isValidGram = !isNaN(gramNum) && gramNum > 0;
+  const isLargePortion = isValidGram && gramNum >= 1000;
 
   const portionNutrition = food && isValidGram
     ? calculatePortionNutrition(food.kalori_100g, food.protein_100g, gramNum)
     : { kalori: 0, protein: 0 };
+
+  const projectedKalori = todayKalori + portionNutrition.kalori;
+  const isProjectedOver =
+    targets !== null &&
+    targets.targetKalori > 0 &&
+    projectedKalori > targets.targetKalori;
 
   const handleSelectQuickPortion = (portion: number) => {
     setGramText(portion.toString());
@@ -176,6 +196,13 @@ export default function FoodDetailScreen() {
           placeholderTextColor="#94A3B8"
         />
         {errorText && <Text style={styles.errorText}>{errorText}</Text>}
+        {isLargePortion && (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningText}>
+              Porsi sangat besar, periksa kembali angka gramnya
+            </Text>
+          </View>
+        )}
 
         {/* Tombol Cepat Porsi 50/100/150/200 */}
         <Text style={styles.quickLabel}>Pilih Cepat:</Text>
@@ -226,6 +253,24 @@ export default function FoodDetailScreen() {
           </View>
         </View>
       </View>
+
+      {/* Proyeksi Total Kalori Hari Ini */}
+      {targets && (
+        <View style={styles.projectionSection}>
+          <Text style={styles.projectionText}>
+            Setelah ditambah, total hari ini: {formatKalori(projectedKalori)} / target{' '}
+            {formatKalori(targets.targetKalori)} kkal
+          </Text>
+          {isProjectedOver && (
+            <View style={styles.warningBox}>
+              <Text style={styles.warningText}>
+                Dengan porsi ini asupan kalori melewati target hari ini (+
+                {formatKalori(projectedKalori - targets.targetKalori)} kkal)
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Tombol Tambah */}
       <Pressable
@@ -358,6 +403,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     marginTop: 6,
+  },
+  warningBox: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  warningText: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  projectionSection: {
+    marginBottom: 14,
+  },
+  projectionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+    lineHeight: 20,
   },
   quickLabel: {
     fontSize: 13,

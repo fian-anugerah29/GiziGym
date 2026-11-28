@@ -1,5 +1,6 @@
 /**
  * Sumber: Kementerian Kesehatan RI (2020), Tabel Komposisi Pangan Indonesia, nilai per 100 g bagian yang dapat dimakan.
+ * Makanan bertanda (USDA) bersumber dari USDA FoodData Central karena tidak tersedia di TKPI; sisanya dari Kementerian Kesehatan RI (2020), Tabel Komposisi Pangan Indonesia.
  */
 
 export interface FoodSeedItem {
@@ -124,4 +125,6 @@ export const FOODS_SEED: FoodSeedItem[] = [
   { nama: 'Kembang tahu', kalori_100g: 380, protein_100g: 48.9 },
   { nama: 'Kembang tahu rebus', kalori_100g: 90, protein_100g: 10.7 },
   { nama: 'Moon tahu', kalori_100g: 128, protein_100g: 8.0 },
+  { nama: 'Telur ayam rebus (USDA)', kalori_100g: 155, protein_100g: 12.6 },
+  { nama: 'Dada ayam tanpa kulit matang panggang (USDA)', kalori_100g: 165, protein_100g: 31.0 },
 ];

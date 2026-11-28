@@ -110,9 +110,49 @@ export default function BerandaScreen() {
     ? Math.min(Math.max((totalProtein / targets.targetProtein) * 100, 0), 100)
     : 0;
 
-  // Cek apakah asupan melebihi target
-  const isKaloriOver = targets.targetKalori > 0 && totalKalori > targets.targetKalori;
-  const isProteinOver = targets.targetProtein > 0 && totalProtein > targets.targetProtein;
+  // Cek status target kalori berdasarkan tujuan & rasio r = totalKalori / targetKalori
+  const calorieRatio =
+    targets.targetKalori > 0 ? totalKalori / targets.targetKalori : 0;
+
+  let kaloriStatus: { tone: 'success' | 'warning'; message: string } | null = null;
+  if (targets.targetKalori > 0) {
+    if (profile.tujuan === 'bulking') {
+      if (calorieRatio >= 1.0 && calorieRatio <= 1.1) {
+        kaloriStatus = {
+          tone: 'success',
+          message: 'Target kalori hari ini tercapai',
+        };
+      } else if (calorieRatio > 1.1) {
+        kaloriStatus = {
+          tone: 'warning',
+          message: `Asupan kalori melewati target (+${formatKalori(totalKalori - targets.targetKalori)} kkal)`,
+        };
+      }
+    } else {
+      // cutting
+      if (calorieRatio > 1.0) {
+        kaloriStatus = {
+          tone: 'warning',
+          message: `Asupan kalori melewati target (+${formatKalori(totalKalori - targets.targetKalori)} kkal)`,
+        };
+      } else if (calorieRatio >= 0.95 && calorieRatio <= 1.0) {
+        kaloriStatus = {
+          tone: 'success',
+          message: 'Target kalori hari ini hampir tercapai',
+        };
+      }
+    }
+  }
+
+  const isProteinAchieved =
+    targets.targetProtein > 0 && totalProtein >= targets.targetProtein;
+
+  const kaloriBarStyle =
+    kaloriStatus?.tone === 'success'
+      ? styles.progressKaloriSuccess
+      : kaloriStatus?.tone === 'warning'
+        ? styles.progressKaloriWarning
+        : styles.progressKalori;
 
   return (
     <ScrollView
@@ -128,6 +168,40 @@ export default function BerandaScreen() {
         <Text style={styles.dateLabel}>Hari Ini</Text>
         <Text style={styles.dateValue}>{formatDisplayDate(todayStr)}</Text>
       </View>
+
+      {/* Kartu Status Target Kalori & Protein */}
+      {(kaloriStatus || isProteinAchieved) && (
+        <View style={styles.statusContainer}>
+          {kaloriStatus && (
+            <View
+              style={[
+                styles.statusCard,
+                kaloriStatus.tone === 'success'
+                  ? styles.statusCardSuccess
+                  : styles.statusCardWarning,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusCardText,
+                  kaloriStatus.tone === 'success'
+                    ? styles.statusTextSuccess
+                    : styles.statusTextWarning,
+                ]}
+              >
+                {kaloriStatus.message}
+              </Text>
+            </View>
+          )}
+          {isProteinAchieved && (
+            <View style={[styles.statusCard, styles.statusCardSuccess]}>
+              <Text style={[styles.statusCardText, styles.statusTextSuccess]}>
+                Target protein hari ini tercapai
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Kartu Target Kalori & Protein */}
       <View style={styles.card}>
@@ -145,7 +219,7 @@ export default function BerandaScreen() {
             <View
               style={[
                 styles.progressBarFill,
-                isKaloriOver ? styles.progressKaloriOver : styles.progressKalori,
+                kaloriBarStyle,
                 { width: `${kaloriPercent}%` },
               ]}
             />
@@ -179,7 +253,7 @@ export default function BerandaScreen() {
             <View
               style={[
                 styles.progressBarFill,
-                isProteinOver ? styles.progressProteinOver : styles.progressProtein,
+                styles.progressProtein,
                 { width: `${proteinPercent}%` },
               ]}
             />
@@ -308,6 +382,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  statusContainer: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  statusCard: {
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderWidth: 1,
+  },
+  statusCardSuccess: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  statusCardWarning: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  statusCardText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  statusTextSuccess: {
+    color: '#065F46',
+  },
+  statusTextWarning: {
+    color: '#92400E',
+  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -375,14 +477,14 @@ const styles = StyleSheet.create({
   progressKalori: {
     backgroundColor: '#2563EB',
   },
-  progressKaloriOver: {
-    backgroundColor: '#EF4444',
+  progressKaloriSuccess: {
+    backgroundColor: '#10B981',
+  },
+  progressKaloriWarning: {
+    backgroundColor: '#F59E0B',
   },
   progressProtein: {
     backgroundColor: '#10B981',
-  },
-  progressProteinOver: {
-    backgroundColor: '#F59E0B',
   },
   subInfoRow: {
     flexDirection: 'row',
